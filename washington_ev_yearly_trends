@@ -1,0 +1,62 @@
+import pandas as pd
+import requests
+from io import StringIO
+
+# URL for the Washington State Electric Vehicle Population Data (CSV format)
+url = "https://data.wa.gov/api/views/f6w7-q2d2/rows.csv?accessType=DOWNLOAD"
+
+# Fetch the data
+response = requests.get(url)
+data = StringIO(response.text)
+
+# Load the data into a pandas DataFrame
+df = pd.read_csv("/content/Electric_Vehicle_Population_Data(1)(in).csv")
+
+# Assuming 'Model Year' is the column for the year (adjust if column name differs)
+# Group by 'Model Year' and count the number of EVs
+yearly_counts = df.groupby('Model Year').size().reset_index(name='Count')
+
+# Sort by year
+yearly_counts = yearly_counts.sort_values('Model Year')
+
+# Calculate year-over-year growth rate
+yearly_counts['Growth Rate (%)'] = yearly_counts['Count'].pct_change() * 100
+
+# Fill NaN for the first year (no previous year to compare)
+yearly_counts['Growth Rate (%)'] = yearly_counts['Growth Rate (%)'].fillna(0)
+
+# Print the year-wise growth trends to the console
+print("Year-wise EV Adoption Trends in Washington State:")
+print(yearly_counts.to_string(index=False))
+
+# Export to Excel for further analysis
+yearly_counts.to_excel('washington_ev_yearly_trends.xlsx', index=False)
+Year-wise EV Adoption Trends in Washington State:
+ Model Year  Count  Growth Rate (%)
+       1999      2         0.000000
+       2000      8       300.000000
+       2002      1       -87.500000
+       2003      1         0.000000
+       2008     20      1900.000000
+       2010     22        10.000000
+       2011    622      2727.272727
+       2012   1438       131.189711
+       2013   4061       182.406120
+       2014   3293       -18.911598
+       2015   4532        37.625266
+       2016   5203        14.805825
+       2017   8668        66.596195
+       2018  14323        65.239963
+       2019  10935       -23.654262
+       2020  12213        11.687243
+       2021  20774        70.097437
+       2022  29400        41.523058
+       2023  60157       104.615646
+       2024  49234       -18.157488
+       2025  32674       -33.635293
+       2026   7047       -78.432393
+
+Trends exported to 'washington_ev_yearly_trends.xlsx'
+
+
+print("\nTrends exported to 'washington_ev_yearly_trends.xlsx'")
