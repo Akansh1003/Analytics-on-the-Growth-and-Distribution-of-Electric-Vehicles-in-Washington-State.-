@@ -1,0 +1,25 @@
+import pandas as pd
+import requests
+from io import StringIO
+# URL for the Washington State Electric Vehicle Population Data (CSV format)
+url = "https://data.wa.gov/api/views/f6w7-q2d2/rows.csv?accessType=DOWNLOAD"
+# Fetch the data
+response = requests.get(url)
+data = StringIO(response.text)
+# Load the data into a pandas DataFrame
+df = pd.read_csv(data)
+# Analyze the total number of electric vehicles
+total_evs = len(df)
+# Print the total number to the console
+print(f"Total number of electric vehicles registered in Washington State: {total_evs}")
+# Create a simple Excel sheet with the analysis
+# We'll create a new DataFrame for the summary
+summary_df = pd.DataFrame({
+    'Metric': ['Total Electric Vehicles'],
+    'Value': [total_evs]
+})
+# Export to Excel
+summary_df.to_excel('washington_ev_analysis.xlsx', index=False)
+print("Analysis exported to 'washington_ev_analysis.xlsx'")
+Total number of electric vehicles registered in Washington State: 264628
+Analysis exported to 'washington_ev_analysis.xlsx'
