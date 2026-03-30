@@ -1,0 +1,67 @@
+import pandas as pd
+import requests
+from io import StringIO
+
+# URL for the Washington State Electric Vehicle Population Data (CSV format)
+url = "https://data.wa.gov/api/views/f6w7-q2d2/rows.csv?accessType=DOWNLOAD"
+
+# Fetch the data again
+response = requests.get(url)
+data = StringIO(response.text)
+
+# Load the data into a pandas DataFrame
+df =  pd.read_csv("/content/Electric_Vehicle_Population_Data(1)(in).csv")
+
+# Total number of EVs for percentage calculations
+total_evs = len(df)
+
+# County-wise distribution
+county_distribution = df.groupby('County').size().reset_index(name='EV Count')
+county_distribution['Percentage (%)'] = (county_distribution['EV Count'] / total_evs) * 100
+county_distribution = county_distribution.sort_values('EV Count', ascending=False)
+
+# City-wise distribution
+city_distribution = df.groupby('City').size().reset_index(name='EV Count')
+city_distribution['Percentage (%)'] = (city_distribution['EV Count'] / total_evs) * 100
+city_distribution = city_distribution.sort_values('EV Count', ascending=False)
+
+# Print top 10 county-wise distribution to console
+print("Top 10 County-wise EV Distribution in Washington State:")
+print(county_distribution.head(10).to_string(index=False))
+
+# Print top 10 city-wise distribution to console
+print("\nTop 10 City-wise EV Distribution in Washington State:")
+print(city_distribution.head(10).to_string(index=False))
+
+# Export full distributions to Excel
+with pd.ExcelWriter('washington_ev_distribution.xlsx') as writer:
+    county_distribution.to_excel(writer, sheet_name='County Distribution', index=False)
+    city_distribution.to_excel(writer, sheet_name='City Distribution', index=False)
+Top 10 County-wise EV Distribution in Washington State:
+   County  EV Count  Percentage (%)
+     King    131179       49.571096
+Snohomish     32715       12.362637
+   Pierce     21855        8.258763
+    Clark     16232        6.133894
+ Thurston      9616        3.633780
+   Kitsap      8942        3.379083
+  Spokane      7433        2.808849
+  Whatcom      6488        2.451744
+   Benton      3653        1.380428
+   Skagit      3117        1.177880
+
+Top 10 City-wise EV Distribution in Washington State:
+     City  EV Count  Percentage (%)
+  Seattle     41533       15.694862
+ Bellevue     12845        4.853984
+Vancouver      9862        3.726741
+  Redmond      9035        3.414227
+  Bothell      8721        3.295570
+ Kirkland      7463        2.820185
+Sammamish      7345        2.775594
+   Renton      7234        2.733649
+  Olympia      6212        2.347446
+   Tacoma      5774        2.181931
+
+Full distributions exported to 'washington_ev_distribution.xlsx'
+print("\nFull distributions exported to 'washington_ev_distribution.xlsx'")
