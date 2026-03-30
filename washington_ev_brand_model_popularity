@@ -1,0 +1,61 @@
+import pandas as pd
+import requests
+from io import StringIO
+
+# URL for the Washington State Electric Vehicle Population Data (CSV format)
+url = "https://data.wa.gov/api/views/f6w7-q2d2/rows.csv?accessType=DOWNLOAD"
+
+# Fetch the data again
+response = requests.get(url)
+data = StringIO(response.text)
+
+# Load the data into a pandas DataFrame
+df =  pd.read_csv("/content/Electric_Vehicle_Population_Data(1)(in).csv")
+# Total number of EVs for percentage calculations
+total_evs = len(df)
+# Brand-wise popularity (group by 'Make')
+brand_distribution = df.groupby('Make').size().reset_index(name='EV Count')
+brand_distribution['Percentage (%)'] = (brand_distribution['EV Count'] / total_evs) * 100
+brand_distribution = brand_distribution.sort_values('EV Count', ascending=False)
+# Model-wise popularity (group by 'Make' and 'Model')
+model_distribution = df.groupby(['Make', 'Model']).size().reset_index(name='EV Count')
+model_distribution['Percentage (%)'] = (model_distribution['EV Count'] / total_evs) * 100
+model_distribution = model_distribution.sort_values('EV Count', ascending=False)
+# Print top 10 brands to console
+print("Top 10 EV Brands by Popularity in Washington State:")
+print(brand_distribution.head(10).to_string(index=False))
+# Print top 10 models to console
+print("\nTop 10 EV Models by Popularity in Washington State:")
+print(model_distribution.head(10).to_string(index=False))
+# Export full distributions to Excel
+with pd.ExcelWriter('washington_ev_brand_model_popularity.xlsx') as writer:
+    brand_distribution.to_excel(writer, sheet_name='Brand Popularity', index=False)
+    model_distribution.to_excel(writer, sheet_name='Model Popularity', index=False)
+Top 10 EV Brands by Popularity in Washington State:
+      Make  EV Count  Percentage (%)
+     TESLA    108633       41.051212
+ CHEVROLET     19051        7.199163
+    NISSAN     16177        6.113110
+      FORD     14347        5.421573
+       KIA     13183        4.981710
+    TOYOTA     11022        4.165092
+       BMW     10882        4.112188
+   HYUNDAI      9278        3.506054
+    RIVIAN      8118        3.067703
+VOLKSWAGEN      7074        2.673187
+
+Top 10 EV Models by Popularity in Washington State:
+      Make          Model  EV Count  Percentage (%)
+     TESLA        MODEL Y     55187       20.854558
+     TESLA        MODEL 3     37340       14.110374
+    NISSAN           LEAF     13768        5.202775
+ CHEVROLET        BOLT EV      7845        2.964539
+     TESLA        MODEL S      7813        2.952446
+     TESLA        MODEL X      6684        2.525810
+      FORD MUSTANG MACH-E      5893        2.226900
+VOLKSWAGEN           ID.4      5731        2.165682
+   HYUNDAI        IONIQ 5      5267        1.990341
+      JEEP       WRANGLER      4952        1.871306
+
+Full popularity data exported to 'washington_ev_brand_model_popularity.xlsx'
+print("\nFull popularity data exported to 'washington_ev_brand_model_popularity.xlsx'")
