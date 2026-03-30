@@ -1,0 +1,68 @@
+import pandas as pd
+import requests
+from io import StringIO
+
+# URL for the Washington State Electric Vehicle Population Data (CSV format)
+url = "https://data.wa.gov/api/views/f6w7-q2d2/rows.csv?accessType=DOWNLOAD"
+
+# Fetch the data
+response = requests.get(url)
+data = StringIO(response.text)
+
+# Load the data into a pandas DataFrame
+df = pd.read_csv(data)
+
+# Filter out rows where Electric Range is 0 or NaN (assuming 0 means not applicable, like for PHEVs)
+df = df[df['Electric Range'] > 0]
+
+# Group by 'Model Year' and calculate average electric range
+range_trends = df.groupby('Model Year')['Electric Range'].agg(['mean', 'median', 'min', 'max', 'count']).reset_index()
+range_trends = range_trends.rename(columns={
+    'mean': 'Average Range (miles)',
+    'median': 'Median Range (miles)',
+    'min': 'Min Range (miles)',
+    'max': 'Max Range (miles)',
+    'count': 'Number of EVs'
+})
+
+# Sort by Model Year
+range_trends = range_trends.sort_values('Model Year')
+
+# Calculate year-over-year change in average range
+range_trends['YoY Change in Avg Range (%)'] = range_trends['Average Range (miles)'].pct_change() * 100
+range_trends['YoY Change in Avg Range (%)'] = range_trends['YoY Change in Avg Range (%)'].fillna(0)
+
+# Print the electric range trends to the console
+print("Electric Range Trends by Model Year in Washington State:")
+print(range_trends.to_string(index=False))
+
+# Export to Excel for further analysis
+range_trends.to_excel('washington_ev_range_trends.xlsx', index=False)
+
+print("\nTrends exported to 'washington_ev_range_trends.xlsx'")
+Electric Range Trends by Model Year in Washington State:
+ Model Year  Average Range (miles)  Median Range (miles)  Min Range (miles)  Max Range (miles)  Number of EVs  YoY Change in Avg Range (%)
+       1999              74.000000                  74.0               74.0               74.0              2                     0.000000
+       2000              58.000000                  58.0               58.0               58.0              8                   -21.621622
+       2002              95.000000                  95.0               95.0               95.0              1                    63.793103
+       2003              95.000000                  95.0               95.0               95.0              1                     0.000000
+       2008             220.000000                 220.0              220.0              220.0             19                   131.578947
+       2010             231.818182                 245.0              100.0              245.0             22                     5.371901
+       2011              71.331190                  73.0               35.0              245.0            622                   -69.229683
+       2012              59.805285                  35.0                6.0              265.0           1438                   -16.158296
+       2013              78.917016                  75.0                6.0              208.0           4061                    31.956591
+       2014              79.036137                  72.0                6.0              208.0           3293                     0.150946
+       2015              95.693733                  84.0                6.0              208.0           4532                    21.075924
+       2016             100.924082                  84.0               10.0              210.0           5203                     5.465717
+       2017             118.003230                  97.0                8.0              238.0           8668                    16.922768
+       2018             157.343527                 215.0                8.0              249.0          14322                    33.338322
+       2019             176.494740                 220.0               10.0              289.0          10931                    12.171592
+       2020             238.865442                 266.0               12.0              337.0          12136                    35.338561
+       2021              50.715053                  29.0               14.0              233.0           5029                   -78.768359
+       2022              28.905890                  30.0               14.0               42.0           4856                   -43.003333
+       2023              30.505945                  32.0               13.0               51.0           7485                     5.535397
+       2024              34.367779                  32.0                6.0              308.0          10732                    12.659281
+       2025              34.903969                  34.0                1.0               60.0           7206                     1.560154
+       2026              37.496154                  38.0               24.0               54.0            260                     7.426619
+
+Trends exported to 'washington_ev_range_trends.xlsx'
