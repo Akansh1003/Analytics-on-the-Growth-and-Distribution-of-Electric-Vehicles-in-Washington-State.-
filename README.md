@@ -1,0 +1,2 @@
+# Analytics-on-the-Growth-and-Distribution-of-Electric-Vehicles-in-Washington-State.-
+This project analyzes the growth and distribution of electric vehicles in Washington State, focusing on adoption trends across years, regions, and manufacturers. It provides insights into EV popularity, range, and policy impact, supporting better infrastructure planning, sustainable mobility strategies, and future decision making.
