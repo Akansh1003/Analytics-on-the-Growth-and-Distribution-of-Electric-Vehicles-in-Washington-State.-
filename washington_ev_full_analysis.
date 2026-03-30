@@ -1,0 +1,113 @@
+import pandas as pd
+import requests
+from io import StringIO
+
+# Step 1: Data Collection
+url = "https://data.wa.gov/api/views/f6w7-q2d2/rows.csv?accessType=DOWNLOAD"
+response = requests.get(url)
+data = StringIO(response.text)
+df = pd.read_csv(data)
+
+# Step 2: Data Cleaning
+# Remove duplicates
+df = df.drop_duplicates()
+# Filter for active vehicles (assuming 'Registration Status' == 'Active' or similar; adjust if needed)
+if 'Registration Status' in df.columns:
+    df = df[df['Registration Status'] == 'Active']
+# Ensure numeric fields are properly typed
+df['Model Year'] = pd.to_numeric(df['Model Year'], errors='coerce')
+df['Electric Range'] = pd.to_numeric(df['Electric Range'], errors='coerce')
+
+total_evs = len(df)
+
+# Objective 1: Analyze total number of EVs
+print(f"Total EVs registered: {total_evs}")
+
+# Objective 2: Year-wise growth trends
+yearly_counts = df.groupby('Model Year').size().reset_index(name='Count')
+yearly_counts = yearly_counts.sort_values('Model Year')
+yearly_counts['Growth Rate (%)'] = yearly_counts['Count'].pct_change() * 100
+yearly_counts['Growth Rate (%)'] = yearly_counts['Growth Rate (%)'].fillna(0)
+
+# Objective 3: County-wise and city-wise distribution
+county_dist = df.groupby('County').size().reset_index(name='EV Count')
+county_dist['Percentage (%)'] = (county_dist['EV Count'] / total_evs) * 100
+county_dist = county_dist.sort_values('EV Count', ascending=False)
+
+city_dist = df.groupby('City').size().reset_index(name='EV Count')
+city_dist['Percentage (%)'] = (city_dist['EV Count'] / total_evs) * 100
+city_dist = city_dist.sort_values('EV Count', ascending=False)
+
+# Objective 4: Popularity of EV brands and models
+brand_dist = df.groupby('Make').size().reset_index(name='EV Count')
+brand_dist['Percentage (%)'] = (brand_dist['EV Count'] / total_evs) * 100
+brand_dist = brand_dist.sort_values('EV Count', ascending=False)
+
+model_dist = df.groupby(['Make', 'Model']).size().reset_index(name='EV Count')
+model_dist['Percentage (%)'] = (model_dist['EV Count'] / total_evs) * 100
+model_dist = model_dist.sort_values('EV Count', ascending=False)
+
+# Objective 5: Electric range trends by model year
+df_range = df[df['Electric Range'] > 0]
+range_trends = df_range.groupby('Model Year')['Electric Range'].agg(['mean', 'median', 'min', 'max', 'count']).reset_index()
+range_trends = range_trends.rename(columns={
+    'mean': 'Average Range (miles)',
+    'median': 'Median Range (miles)',
+    'min': 'Min Range (miles)',
+    'max': 'Max Range (miles)',
+    'count': 'Number of EVs'
+})
+range_trends = range_trends.sort_values('Model Year')
+range_trends['YoY Change in Avg Range (%)'] = range_trends['Average Range (miles)'].pct_change() * 100
+range_trends['YoY Change in Avg Range (%)'] = range_trends['YoY Change in Avg Range (%)'].fillna(0)
+
+# Objective 6: Derive insights for planning and policy
+latest_growth = yearly_counts['Growth Rate (%)'].iloc[-1] if len(yearly_counts) > 1 else 0
+top_counties = county_dist.head(5)
+top_cities = city_dist.head(5)
+top_brands = brand_dist.head(5)
+top_models = model_dist.head(5)
+range_improvement = range_trends['YoY Change in Avg Range (%)'].mean() if len(range_trends) > 1 else 0
+
+insights = [
+    f"Total EVs: {total_evs}. Indicates scale of adoption.",
+    f"Latest YoY growth: {latest_growth:.2f}%. Suggests demand for infrastructure expansion.",
+    f"Top counties: {', '.join(top_counties['County'].tolist())} ({', '.join([f'{p:.1f}%' for p in top_counties['Percentage (%)']])}). Target incentives here.",
+    f"Top cities: {', '.join(top_cities['City'].tolist())} ({', '.join([f'{p:.1f}%' for p in top_cities['Percentage (%)']])}). Focus on urban charging.",
+    f"Top brands: {', '.join(top_brands['Make'].tolist())} ({', '.join([f'{p:.1f}%' for p in top_brands['Percentage (%)']])}). Partner for subsidies.",
+    f"Top models: {', '.join([f'{row.Make} {row.Model}' for _, row in top_models.iterrows()])} ({', '.join([f'{p:.1f}%' for p in top_models['Percentage (%)']])}). Popular choices.",
+    f"Avg annual range improvement: {range_improvement:.2f}%. Invest in fast-charging to leverage this.",
+    "Recommendations: Expand charging networks in high-adoption areas, offer incentives for diverse brands, educate on range benefits, and monitor growth for energy planning."
+]
+
+print("\nKey Insights:")
+for i, insight in enumerate(insights, 1):
+    print(f"{i}. {insight}")
+
+# Step 4: Export to Excel for visualization
+with pd.ExcelWriter('washington_ev_full_analysis.xlsx') as writer:
+    yearly_counts.to_excel(writer, sheet_name='Yearly Trends', index=False)
+    county_dist.to_excel(writer, sheet_name='County Distribution', index=False)
+    city_dist.to_excel(writer, sheet_name='City Distribution', index=False)
+    brand_dist.to_excel(writer, sheet_name='Brand Popularity', index=False)
+    model_dist.to_excel(writer, sheet_name='Model Popularity', index=False)
+    range_trends.to_excel(writer, sheet_name='Range Trends', index=False)
+    pd.DataFrame({'Insights': insights}).to_excel(writer, sheet_name='Policy Insights', index=False)
+
+print("\nFull analysis exported to 'washington_ev_full_analysis.xlsx'")
+
+Total EVs registered: 264628
+
+Key Insights:
+1. Total EVs: 264628. Indicates scale of adoption.
+2. Latest YoY growth: -78.43%. Suggests demand for infrastructure expansion.
+3. Top counties: King, Snohomish, Pierce, Clark, Thurston (49.6%, 12.4%, 8.3%, 6.1%, 3.6%). Target incentives here.
+4. Top cities: Seattle, Bellevue, Vancouver, Redmond, Bothell (15.7%, 4.9%, 3.7%, 3.4%, 3.3%). Focus on urban charging.
+5. Top brands: TESLA, CHEVROLET, NISSAN, FORD, KIA (41.1%, 7.2%, 6.1%, 5.4%, 5.0%). Partner for subsidies.
+6. Top models: TESLA MODEL Y, TESLA MODEL 3, NISSAN LEAF, CHEVROLET BOLT EV, TESLA MODEL S (20.9%, 14.1%, 5.2%, 3.0%, 3.0%). Popular choices.
+7. Avg annual range improvement: 7.07%. Invest in fast-charging to leverage this.
+8. Recommendations: Expand charging networks in high-adoption areas, offer incentives for diverse brands, educate on range benefits, and monitor growth for energy planning.
+
+Full analysis exported to 'washington_ev_full_analysis.xlsx'
+
+[ ]
